@@ -1,90 +1,79 @@
 # %%
-
-import random
 import os
-
-rootDirectory = r"C:\GoogleDrive\Study\Python\Effective_Python\Practice"
-directoryPathList = []
-for dir in os.listdir(rootDirectory):
-    if os.path.isdir(os.path.join(rootDirectory, dir)):
-        directoryPathList.append(os.path.join(rootDirectory, dir))
-# %%
-directoryPathList
-
-
-# %%
-# 폴더 경로 주어지면 폴더 안 이미지 찾아서
-# 이미지 이름별로 묶고
-#
-
-# %%
-# 경로 내의 이미지 추출하는 함수
+import cv2
 
 def findImageFile(path):
     images = []
     files = os.listdir(path)
     for file in files:
-        print(file)
         ext = os.path.splitext(file)[1]
-        print("os.path.splitext(file)[1] : ", os.path.splitext(file)[1])
-        if os.path.splitext(file)[1].lower() == ".jpg":
+        if os.path.splitext(file)[1].lower() == ".jpg":   # 다른 확장자 있을 경우 추가
             images.append(file)
-
     return images
 
+def mergeImage(directoryPath, leftImageName, rightImageName, centerImageName):
+    leftImage = cv2.imread(os.path.join(directoryPath, leftImageName))
+    rightImage = cv2.imread(os.path.join(directoryPath, rightImageName))
+    centerImage = cv2.imread(os.path.join(directoryPath, centerImageName))
+    
+    # 1번 이미지 r, 2번 이미지 g, 3번 이미지 r channel 분리
+    _, _, leftImage_r = cv2.split(leftImage)
+    _, rightImage_g, _ = cv2.split(rightImage)
+    _, _, centerImage_r = cv2.split(centerImage)
 
-# %%
-images = findImageFile(directoryPathList[0])
-
-# %%
-images
-# %%
-imagesGroup = {}
-
-for image in images[:]:
-    imageName = os.path.splitext(image)[0]
-    imageExt = os.path.splitext(image)[1]
-
-    print("imageName : ", imageName)
-    print("imageExt : ", imageExt)
-
-    commonImageName = imageName.split("_")[0]
-    print("commonImageName : ", commonImageName)
-    group = imagesGroup.get(commonImageName, [])
-    group.append(image)
-    imagesGroup[commonImageName] = group
-
-# %%
-imagesGroup
-# %%
-testList = []
-for key in imagesGroup.keys():
-    if(len(imagesGroup[key]) == 3):
-        testList.extend(imagesGroup[key])
+    mergeImage = cv2.merge((leftImage_r, rightImage_g, centerImage_r))
+    return mergeImage
 
 
-# %%
-testList
-
-# %%
-
-random.shuffle(testList)
-# %%
-testList
+def createFolder(directory):
+    try:
+        if not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
+    except OSError:
+        print ('Error: Creating directory. ' +  directory)
 
 
-# %%
-a1 = testList[0]
-print(a1)
-a2 = os.path.splitext(a1)[0][-1]
+def SaveResult(className, key, image):
+    parentDirectory = os.path.dirname(rootDirectory)
+    resultDirectory = os.path.join(parentDirectory, "MergeResult")
+    classDirectory = os.path.join(resultDirectory, className)
+    createFolder(classDirectory)
+    imageFile = key + ".jpg"
+    cv2.imwrite(os.path.join(classDirectory, imageFile), image)
 
-print(a2)
 
-# %%
-sortedtestList = sorted(
-    testList, key=lambda test: os.path.splitext(test)[0][-1])
-# %%
-testList
-# %%
-sortedtestList
+rootDirectory = r"D:\JK\Study\MLS\Effective_Python\Practice\Images"  # 클래스 폴더들의 상위 폴더 경로
+directoryPathList = []
+for dir in os.listdir(rootDirectory):
+    if os.path.isdir(os.path.join(rootDirectory, dir)):
+        directoryPathList.append(os.path.join(rootDirectory, dir))
+
+for directoryPath in directoryPathList:
+    images = findImageFile(directoryPath)
+    className = directoryPath.split(os.sep)[-1]
+
+    print("className : ", className)
+
+    imagesGroup = {}
+
+    for image in images[:]:
+        imageName = os.path.splitext(image)[0]
+        imageExt = os.path.splitext(image)[1]
+        commonImageName = imageName.split("_")[0]
+        group = imagesGroup.get(commonImageName, [])
+        group.append(image)
+        imagesGroup[commonImageName] = group
+
+    print("imagesGroup : ", imagesGroup)
+
+    for key in imagesGroup.keys():
+        if(len(imagesGroup[key]) == 3):  # 다른 Case 있으면 예외처리 필요
+            images = imagesGroup[key]
+            images = sorted(images, key=lambda file : os.path.splitext(file)[0][-1])
+            mergeResult = mergeImage(directoryPath, *images)
+
+            SaveResult(className, key, mergeResult)
+    print("="*20)
+
+
 # %%
